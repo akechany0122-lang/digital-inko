@@ -49,6 +49,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ==========================================
+    // 音量調節UIとiOS音声再生の初期化
+    // ==========================================
+    const volumeSlider = document.getElementById('volume-slider');
+    let parrotVolume = 1.0;
+    if (volumeSlider) {
+        volumeSlider.addEventListener('input', (e) => {
+            parrotVolume = parseFloat(e.target.value);
+        });
+    }
+
+    // iOS Safari対策: 初回のユーザー操作時にダミー音声を再生してAPIを有効化する
+    let hasInitializedSpeech = false;
+    document.addEventListener('click', () => {
+        if (!hasInitializedSpeech && window.speechSynthesis) {
+            const u = new SpeechSynthesisUtterance('');
+            u.volume = 0;
+            window.speechSynthesis.speak(u);
+            hasInitializedSpeech = true;
+        }
+    }, { once: true });
+
     // 単語帳UIと背景アーカイブUIの要素
     const dictToggleBtn = document.getElementById('dict-toggle-btn');
     const dictPanel = document.getElementById('dict-panel');
@@ -218,7 +240,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // カタカナをひらがなに変換
                 finalTranscript = toHiragana(finalTranscript);
 
-                // 記憶リストの更新（ユーザーが言った正しい言葉をカウント）
+                // Supabaseに言葉を保存・更新（みんなで育てているので毎回実行）
+                saveWordToDB(finalTranscript);
+
+                // ローカルでもすぐに反映させるためカウントアップ
                 if (memory[finalTranscript]) {
                     memory[finalTranscript]++;
                 } else {
@@ -227,17 +252,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const timesHeard = memory[finalTranscript];
                 renderMemory();
 
-                // 覚えるために必要な回数（最低8回。文字数が多いほど増える）
+                // 覚えるために必要な回数
                 const requiredTimes = getRequiredTimes(finalTranscript.length);
 
-                // 学習条件（ルート1）: 必要回数に達した瞬間に餌を出現させる
+                // 必要回数に達した瞬間に餌を出現させる（自分が教えきった場合）
                 if (timesHeard === requiredTimes) {
                     spawnFood(finalTranscript);
 
-                    // Supabaseに言葉を保存・更新
-                    saveWordToDB(finalTranscript);
-
-                    // 背景の餌の出現チェック（完璧に覚えた言葉の数が5の倍数になった瞬間）
+                    // 背景の餌の出現チェック
                     const learnedCount = Object.keys(memory).filter(w => memory[w] >= getRequiredTimes(w.length)).length;
                     if (learnedCount > 0 && learnedCount % 5 === 0 && bgSpawnCount < Math.floor(learnedCount / 5)) {
                         bgSpawnCount++;
@@ -315,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'ja-JP';
-        utterance.volume = 1.0; // 音量を最大に
+        utterance.volume = parrotVolume; // UIと連動した音量
 
         // イントネーションのバリエーション
         let basePitch = 2.0;
@@ -740,18 +762,21 @@ document.addEventListener('DOMContentLoaded', () => {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'parrot_memories' }, payload => {
                 if (payload.new && payload.new.word) {
                     const newWord = payload.new.word;
+                    const newCount = payload.new.count;
 
-                    // リアルタイムで届いた言葉もメモリに反映
                     const requiredTimes = getRequiredTimes(newWord.length);
-                    if (!memory[newWord]) {
-                        memory[newWord] = requiredTimes;
-                        renderMemory();
-                    }
+                    const prevCount = memory[newWord] || 0;
 
-                    // まだ画面に出ていなければ餌として降らせる
-                    const isAlreadySpawned = foods.some(f => f.text === newWord);
-                    if (!isAlreadySpawned) {
-                        spawnFood(newWord);
+                    // リアルタイムで届いたカウントを反映（より大きい値を優先）
+                    memory[newWord] = Math.max(prevCount, newCount);
+                    renderMemory();
+
+                    // 今回の更新で新たに必要回数に達した場合、餌として降らせる
+                    if (prevCount < requiredTimes && memory[newWord] >= requiredTimes) {
+                        const isAlreadySpawned = foods.some(f => f.text === newWord);
+                        if (!isAlreadySpawned) {
+                            spawnFood(newWord);
+                        }
                     }
                 }
             })
