@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>デジタルインコ - 言葉を覚えるよ！</title>
+    <!-- ドット絵風日本語フォント -->
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 左上のヘルプUIエリア -->
+    <div class="top-left-ui">
+        <div id="help-widget" class="help-widget">
+            <button id="help-btn" class="help-btn" aria-label="使い方を見る">？</button>
+            <div id="help-panel" class="help-panel hidden">
+                <div class="help-panel-inner">
+                    <h2 class="help-title">🦜 デジタルインコ の育て方</h2>
+                    <ul class="help-list">
+                        <li>
+                            <span class="help-icon">🎙️</span>
+                            <span>「おしゃべりする」ボタンを押して、インコに向かって話しかけよう！</span>
+                        </li>
+                        <li>
+                            <span class="help-icon">🔁</span>
+                            <span>同じ言葉を<strong>何回か繰り返す</strong>と、インコがその言葉を覚えてくれるよ。</span>
+                        </li>
+                        <li>
+                            <span class="help-icon">⏳</span>
+                            <span>インコが返事をするまで待ってね。まだ話し続けると、うまく聞き取れないよ。</span>
+                        </li>
+                        <li>
+                            <span class="help-icon">🌍</span>
+                            <span>このサイトにアクセスしている<strong>みんなが同じインコを育てて</strong>いるよ！</span>
+                        </li>
+                        <li>
+                            <span class="help-icon">👥</span>
+                            <span>他の飼育員さんが覚えさせた言葉も、餌として画面に降ってくるよ。みんなでインコを育てよう！</span>
+                        </li>
+                    </ul>
+                    <button id="help-close-btn" class="help-close-btn">とじる ✕</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <!-- メイン画面（インコエリア） -->
+        <main class="game-screen">
+            <div class="parrot-container" id="parrot-container">
+                <div id="speech-bubble" class="speech-bubble hidden">
+                    <span id="speech-text">...</span>
+                </div>
+                <div id="question-mark" class="question-mark hidden">？</div>
+                <div id="parrot" class="parrot-sprite facing-front"></div>
+                <div id="food-container"></div>
+            </div>
+
+            <div class="controls">
+                <button id="talk-btn" class="pixel-btn">
+                    <span class="icon">🎙️</span> おしゃべりする
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- 右上のUIエリア -->
+    <div class="top-right-ui">
+        <!-- 背景アーカイブUI -->
+        <div id="bg-dictionary" class="word-dictionary">
+            <button id="bg-toggle-btn" class="dict-toggle-btn">🖼️ 背景リスト</button>
+            <div id="bg-panel" class="dict-panel hidden">
+                <ul id="bg-list">
+                    <li class="empty-msg">まだ背景がないよ...</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 単語帳UI -->
+        <div id="word-dictionary" class="word-dictionary">
+            <button id="dict-toggle-btn" class="dict-toggle-btn">📖 覚えた言葉</button>
+            <div id="dict-panel" class="dict-panel hidden">
+                <ul id="dict-list">
+                    <li class="empty-msg">まだ言葉を覚えていないよ...</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
+</body>
+</html>
