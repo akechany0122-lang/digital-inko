@@ -315,7 +315,8 @@ body {
     left: 20px;
     z-index: 200;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
     gap: 10px;
 }
 
@@ -467,7 +468,7 @@ body {
     z-index: 100;
     display: flex;
     gap: 15px;
-    align-items: flex-start;
+    align-items: center;
 }
 
 .word-dictionary {
@@ -723,19 +724,27 @@ body {
     .top-left-ui {
         top: 12px;
         left: 12px;
+        gap: 6px;
+    }
+    .volume-widget {
+        padding: 4px 8px;
+        gap: 4px;
+    }
+    .volume-icon {
+        font-size: 1rem;
     }
     .help-btn {
-        width: 40px;
-        height: 40px;
-        font-size: 1.1rem;
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
     }
     .help-panel {
         width: 260px;
-        top: 50px;
+        top: 45px;
     }
 
     #volume-slider {
-        width: 60px;
+        width: 50px;
     }
 
     /* ボタンサイズ調整 */
