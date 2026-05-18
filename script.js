@@ -690,12 +690,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 .from('parrot_memories')
                 .select('word, count')
                 .order('count', { ascending: false })
-                .limit(20);
+                .limit(50);
 
             if (error) throw error;
             if (data && data.length > 0) {
+                // すべての言葉をローカルの memory に反映（覚えた扱いにする）
+                data.forEach(item => {
+                    const requiredTimes = getRequiredTimes(item.word.length);
+                    if (!memory[item.word]) {
+                        memory[item.word] = requiredTimes;
+                    }
+                });
+                renderMemory(); // 単語帳UIを更新
+
+                // ランダムに数個を餌として降らせる
                 const numToSpawn = Math.min(data.length, 3 + Math.floor(Math.random() * 3));
-                const shuffled = data.sort(() => 0.5 - Math.random());
+                const shuffled = [...data].sort(() => 0.5 - Math.random());
                 for (let i = 0; i < numToSpawn; i++) {
                     setTimeout(() => {
                         spawnFood(shuffled[i].word);
@@ -715,6 +725,15 @@ document.addEventListener('DOMContentLoaded', () => {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'parrot_memories' }, payload => {
                 if (payload.new && payload.new.word) {
                     const newWord = payload.new.word;
+
+                    // リアルタイムで届いた言葉もメモリに反映
+                    const requiredTimes = getRequiredTimes(newWord.length);
+                    if (!memory[newWord]) {
+                        memory[newWord] = requiredTimes;
+                        renderMemory();
+                    }
+
+                    // まだ画面に出ていなければ餌として降らせる
                     const isAlreadySpawned = foods.some(f => f.text === newWord);
                     if (!isAlreadySpawned) {
                         spawnFood(newWord);
