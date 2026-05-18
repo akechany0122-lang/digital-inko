@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recognition = new SpeechRecognition();
         recognition.lang = 'ja-JP';
         recognition.interimResults = true; // 認識途中の結果も取得
-        recognition.continuous = true; // 常時認識をONにする
+        recognition.continuous = false; // iOSでは false が安定（onendで手動再起動）
     } else {
         alert("お使いのブラウザは音声認識に対応していません。Google Chromeをご利用ください。");
         talkBtn.disabled = true;
@@ -277,15 +277,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 認識終了時
         recognition.onend = () => {
-            // 常時認識モードなら、喋っている最中でも必ず再スタートする
             if (isContinuous) {
-                try { recognition.start(); } catch (e) { }
+                // iOSでは即座に再起動すると InvalidStateError になるため少し待つ
+                setTimeout(() => {
+                    if (isContinuous) {
+                        try { recognition.start(); } catch (e) { console.warn('Mic restart failed:', e); }
+                    }
+                }, 300);
             }
         };
 
         recognition.onerror = (event) => {
             console.error('Speech recognition error', event.error);
-            if (event.error !== 'no-speech' && event.error !== 'aborted') {
+            // 一時的なエラー（iOSでよく発生）は認識を継続する
+            const retryableErrors = ['no-speech', 'aborted', 'audio-capture', 'network'];
+            if (retryableErrors.includes(event.error)) {
+                if (isContinuous) {
+                    setTimeout(() => {
+                        if (isContinuous) {
+                            try { recognition.start(); } catch (e) { }
+                        }
+                    }, 500);
+                }
+            } else {
+                // 致命的なエラー（not-allowed など）は停止
                 isContinuous = false;
                 talkBtn.innerHTML = '<span class="icon">🎙️</span> おしゃべりする';
                 talkBtn.classList.remove('pulse');
