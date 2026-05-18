@@ -25,12 +25,14 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    min-height: 100dvh;
     overflow: hidden;
 }
 
 .container {
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -533,8 +535,10 @@ body {
 }
 
 .controls {
-    position: absolute;
-    bottom: 40px;
+    position: fixed;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 20;
 }
 
@@ -669,4 +673,46 @@ body {
     0% { background-color: var(--accent-color); }
     50% { background-color: #ff9800; }
     100% { background-color: var(--accent-color); }
+}
+
+/* ========== スマホ縦向き対応 ========== */
+@media (max-width: 600px) {
+    /* インコを小さくして画面に収める */
+    .parrot-sprite {
+        width: 160px;
+        height: 160px;
+    }
+
+    /* 右上UIをコンパクトに */
+    .top-right-ui {
+        gap: 6px;
+        top: 12px;
+        right: 12px;
+    }
+    .dict-toggle-btn {
+        font-size: 0.78rem;
+        padding: 7px 10px;
+        border-radius: 16px;
+    }
+
+    /* 左上UIをコンパクトに */
+    .top-left-ui {
+        top: 12px;
+        left: 12px;
+    }
+    .help-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 1.1rem;
+    }
+    .help-panel {
+        width: 260px;
+        top: 50px;
+    }
+
+    /* ボタンサイズ調整 */
+    .pixel-btn {
+        font-size: 1rem;
+        padding: 10px 18px;
+    }
 }

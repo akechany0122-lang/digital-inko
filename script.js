@@ -359,11 +359,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // 餌の生成関数
     function spawnFood(text) {
         const id = foodIdCounter++;
-        const padding = 30;
+        const halfSize = parrotElement.offsetWidth / 2;
+        const padding = halfSize + 10;
+        const bottomPadding = 120; // controlsボタン分
         const w = parrotContainer.clientWidth;
         const h = parrotContainer.clientHeight;
         const x = padding + Math.random() * (w - padding * 2);
-        const y = padding + Math.random() * (h - padding * 2);
+        const y = padding + Math.random() * (h - padding - bottomPadding);
 
         const el = document.createElement('div');
         el.className = 'food-text';
@@ -378,11 +380,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // 背景変更用の特殊な餌
     function spawnBackgroundFood() {
         const id = foodIdCounter++;
-        const padding = 40;
+        const halfSize = parrotElement.offsetWidth / 2;
+        const padding = halfSize + 10;
+        const bottomPadding = 120;
         const w = parrotContainer.clientWidth;
         const h = parrotContainer.clientHeight;
         const x = padding + Math.random() * (w - padding * 2);
-        const y = padding + Math.random() * (h - padding * 2);
+        const y = padding + Math.random() * (h - padding - bottomPadding);
 
         const el = document.createElement('div');
         el.className = 'food-bg';
@@ -455,10 +459,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // お散歩モード
             if (!parrotState.target) {
                 if (Date.now() - parrotState.lastIdleTime > 3000 + Math.random() * 4000) {
-                    const padding = 40;
+                    const halfSize = parrotElement.offsetWidth / 2;
+                    const padding = halfSize + 10;
+                    const bottomPadding = 120;
                     parrotState.target = {
                         x: padding + Math.random() * (parrotContainer.clientWidth - padding * 2),
-                        y: padding + Math.random() * (parrotContainer.clientHeight - padding * 2),
+                        y: padding + Math.random() * (parrotContainer.clientHeight - padding - bottomPadding),
                         food: null
                     };
                     parrotState.state = 'walking';
@@ -508,6 +514,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 parrotElement.className = 'parrot-sprite facing-front';
             }
         }
+
+        // 画面境界クランプ（インコが画面外に出ないように）
+        const halfSize = parrotElement.offsetWidth / 2;
+        const bottomPadding = 120;
+        parrotState.x = Math.max(halfSize, Math.min(parrotContainer.clientWidth - halfSize, parrotState.x));
+        parrotState.y = Math.max(halfSize, Math.min(parrotContainer.clientHeight - halfSize - bottomPadding, parrotState.y));
 
         // DOMの座標更新
         parrotElement.style.left = `${parrotState.x}px`;
