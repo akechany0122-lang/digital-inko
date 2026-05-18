@@ -727,22 +727,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 .from('parrot_memories')
                 .select('word, count')
                 .order('count', { ascending: false })
-                .limit(50);
+                .limit(100);
 
             if (error) throw error;
             if (data && data.length > 0) {
-                // すべての言葉をローカルの memory に反映（覚えた扱いにする）
+                // DBの実際のカウントをそのままmemoryに反映（固定値ではなくitem.countを使う）
                 data.forEach(item => {
-                    const requiredTimes = getRequiredTimes(item.word.length);
-                    if (!memory[item.word]) {
-                        memory[item.word] = requiredTimes;
-                    }
+                    memory[item.word] = Math.max(memory[item.word] || 0, item.count);
                 });
-                renderMemory(); // 単語帳UIを更新
+                renderMemory(); // 単語帳UIを更新（覚えた言葉リストが正確に同期される）
 
-                // ランダムに数個を餌として降らせる
-                const numToSpawn = Math.min(data.length, 3 + Math.floor(Math.random() * 3));
-                const shuffled = [...data].sort(() => 0.5 - Math.random());
+                // 覚えた言葉（閾値以上）のみをランダムに数個餌として降らせる
+                const learnedInDB = data.filter(item => item.count >= getRequiredTimes(item.word.length));
+                const numToSpawn = Math.min(learnedInDB.length, 3 + Math.floor(Math.random() * 3));
+                const shuffled = [...learnedInDB].sort(() => 0.5 - Math.random());
                 for (let i = 0; i < numToSpawn; i++) {
                     setTimeout(() => {
                         spawnFood(shuffled[i].word);
