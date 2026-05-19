@@ -398,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function spawnFood(text) {
         const id = foodIdCounter++;
         const halfSize = parrotElement.offsetWidth / 2;
-        const padding = halfSize + 10;
+        const padding = halfSize + 40; // 餌が湧く範囲を少し内側に寄せる
         const bottomPadding = 120; // controlsボタン分
         const w = parrotContainer.clientWidth;
         const h = parrotContainer.clientHeight;
@@ -419,7 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function spawnBackgroundFood() {
         const id = foodIdCounter++;
         const halfSize = parrotElement.offsetWidth / 2;
-        const padding = halfSize + 10;
+        const padding = halfSize + 40; // 餌が湧く範囲を少し内側に寄せる
         const bottomPadding = 120;
         const w = parrotContainer.clientWidth;
         const h = parrotContainer.clientHeight;
@@ -498,7 +498,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!parrotState.target) {
                 if (Date.now() - parrotState.lastIdleTime > 3000 + Math.random() * 4000) {
                     const halfSize = parrotElement.offsetWidth / 2;
-                    const padding = halfSize + 10;
+                    const padding = halfSize + 40;
                     const bottomPadding = 120;
                     parrotState.target = {
                         x: padding + Math.random() * (parrotContainer.clientWidth - padding * 2),
@@ -555,10 +555,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 画面境界クランプ（インコが画面外に出ないように）
         const halfSize = parrotElement.offsetWidth / 2;
-        const padding = halfSize + 10;
+        // インコが動ける範囲を一回り大きくする（クランプを緩める）
+        const clampPadding = halfSize * 0.1;
         const bottomPadding = 120;
-        parrotState.x = Math.max(padding, Math.min(parrotContainer.clientWidth - padding, parrotState.x));
-        parrotState.y = Math.max(padding, Math.min(parrotContainer.clientHeight - padding - bottomPadding, parrotState.y));
+        parrotState.x = Math.max(clampPadding, Math.min(parrotContainer.clientWidth - clampPadding, parrotState.x));
+        parrotState.y = Math.max(clampPadding, Math.min(parrotContainer.clientHeight - clampPadding - bottomPadding, parrotState.y));
 
         // DOMの座標更新
         parrotElement.style.left = `${parrotState.x}px`;
