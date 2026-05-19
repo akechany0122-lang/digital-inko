@@ -240,9 +240,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // カタカナをひらがなに変換
                 finalTranscript = toHiragana(finalTranscript);
 
-                // Supabaseに言葉を保存・更新（みんなで育てているので毎回実行）
-                saveWordToDB(finalTranscript);
-
                 // ローカルでもすぐに反映させるためカウントアップ
                 if (memory[finalTranscript]) {
                     memory[finalTranscript]++;
@@ -250,6 +247,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     memory[finalTranscript] = 1;
                 }
                 const timesHeard = memory[finalTranscript];
+                
+                // Supabaseに言葉を保存・更新（みんなで育てているので毎回実行）
+                saveWordToDB(finalTranscript, timesHeard);
+
                 renderMemory();
 
                 // 覚えるために必要な回数
@@ -402,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const w = parrotContainer.clientWidth;
         const h = parrotContainer.clientHeight;
         const x = padding + Math.random() * (w - padding * 2);
-        const y = padding + Math.random() * (h - padding - bottomPadding);
+        const y = padding + Math.random() * (h - padding * 2 - bottomPadding);
 
         const el = document.createElement('div');
         el.className = 'food-text';
@@ -423,7 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const w = parrotContainer.clientWidth;
         const h = parrotContainer.clientHeight;
         const x = padding + Math.random() * (w - padding * 2);
-        const y = padding + Math.random() * (h - padding - bottomPadding);
+        const y = padding + Math.random() * (h - padding * 2 - bottomPadding);
 
         const el = document.createElement('div');
         el.className = 'food-bg';
@@ -501,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const bottomPadding = 120;
                     parrotState.target = {
                         x: padding + Math.random() * (parrotContainer.clientWidth - padding * 2),
-                        y: padding + Math.random() * (parrotContainer.clientHeight - padding - bottomPadding),
+                        y: padding + Math.random() * (parrotContainer.clientHeight - padding * 2 - bottomPadding),
                         food: null
                     };
                     parrotState.state = 'walking';
@@ -554,9 +555,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 画面境界クランプ（インコが画面外に出ないように）
         const halfSize = parrotElement.offsetWidth / 2;
+        const padding = halfSize + 10;
         const bottomPadding = 120;
-        parrotState.x = Math.max(halfSize, Math.min(parrotContainer.clientWidth - halfSize, parrotState.x));
-        parrotState.y = Math.max(halfSize, Math.min(parrotContainer.clientHeight - halfSize - bottomPadding, parrotState.y));
+        parrotState.x = Math.max(padding, Math.min(parrotContainer.clientWidth - padding, parrotState.x));
+        parrotState.y = Math.max(padding, Math.min(parrotContainer.clientHeight - padding - bottomPadding, parrotState.y));
 
         // DOMの座標更新
         parrotElement.style.left = `${parrotState.x}px`;
@@ -692,93 +694,104 @@ document.addEventListener('DOMContentLoaded', () => {
     // Supabase 連携関数群
     // ==========================================
 
-    async function saveWordToDB(word) {
+    async function saveWordToDB(word, count) {
         if (!supabase) return;
         try {
-            const { data, error } = await supabase
+            // upsertを使用して、既存の言葉は更新、新規は挿入を一度に行う
+            // wordをプライマリーキー（または一意制約）としている前提
+            const { error } = await supabase
                 .from('parrot_memories')
-                .select('count')
-                .eq('word', word)
-                .single();
+                .upsert(
+                    { word: word, count: count },
+                    { onConflict: 'word' } // wordカラムを基準にコンフリクトを判定
+                );
 
-            if (error && error.code !== 'PGRST116') {
-                console.error('Supabase select error:', error);
-            }
-
-            if (data) {
-                await supabase
-                    .from('parrot_memories')
-                    .update({ count: data.count + 1 })
-                    .eq('word', word);
-            } else {
-                await supabase
-                    .from('parrot_memories')
-                    .insert([{ word: word, count: 1 }]);
+            if (error) {
+                console.error('Supabase upsert error:', error.message);
+                throw error;
             }
         } catch (err) {
-            console.error('Supabase save error:', err);
+            console.error('Supabaseへの保存に失敗しました:', err);
         }
     }
 
     async function loadInitialWords() {
         if (!supabase) return;
         try {
+            // 登録済みの言葉をすべて（最大1000件等）取得する
             const { data, error } = await supabase
                 .from('parrot_memories')
                 .select('word, count')
                 .order('count', { ascending: false })
-                .limit(100);
+                .limit(1000);
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase initial load error:', error.message);
+                throw error;
+            }
+
             if (data && data.length > 0) {
-                // DBの実際のカウントをそのままmemoryに反映（固定値ではなくitem.countを使う）
+                // DBの実際のカウントをそのままmemoryに反映（完全に同期）
                 data.forEach(item => {
-                    memory[item.word] = Math.max(memory[item.word] || 0, item.count);
+                    memory[item.word] = item.count;
                 });
                 renderMemory(); // 単語帳UIを更新（覚えた言葉リストが正確に同期される）
 
                 // 覚えた言葉（閾値以上）のみをランダムに数個餌として降らせる
                 const learnedInDB = data.filter(item => item.count >= getRequiredTimes(item.word.length));
-                const numToSpawn = Math.min(learnedInDB.length, 3 + Math.floor(Math.random() * 3));
+                // 上位の言葉からランダムに数個（たとえば最大5個）出現させる
+                const numToSpawn = Math.min(learnedInDB.length, 5);
                 const shuffled = [...learnedInDB].sort(() => 0.5 - Math.random());
                 for (let i = 0; i < numToSpawn; i++) {
                     setTimeout(() => {
-                        spawnFood(shuffled[i].word);
-                    }, i * 2000);
+                        // 既に同じ言葉の餌が出ていないか確認
+                        const isAlreadySpawned = foods.some(f => f.text === shuffled[i].word);
+                        if (!isAlreadySpawned) {
+                            spawnFood(shuffled[i].word);
+                        }
+                    }, i * 1500); // 1.5秒間隔で降らせる
                 }
             }
         } catch (err) {
-            console.error('Supabase load error:', err);
+            console.error('Supabaseからの初期データ読み込みに失敗しました:', err);
         }
     }
 
     function setupRealtimeSubscription() {
         if (!supabase) return;
 
-        supabase
-            .channel('public:parrot_memories')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'parrot_memories' }, payload => {
-                if (payload.new && payload.new.word) {
-                    const newWord = payload.new.word;
-                    const newCount = payload.new.count;
+        try {
+            supabase
+                .channel('public:parrot_memories')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'parrot_memories' }, payload => {
+                    if (payload.new && payload.new.word) {
+                        const newWord = payload.new.word;
+                        const newCount = payload.new.count;
 
-                    const requiredTimes = getRequiredTimes(newWord.length);
-                    const prevCount = memory[newWord] || 0;
+                        const requiredTimes = getRequiredTimes(newWord.length);
+                        const prevCount = memory[newWord] || 0;
 
-                    // リアルタイムで届いたカウントを反映（より大きい値を優先）
-                    memory[newWord] = Math.max(prevCount, newCount);
-                    renderMemory();
+                        // リアルタイムで届いたカウントを反映（常に最新に同期）
+                        memory[newWord] = Math.max(prevCount, newCount);
+                        renderMemory();
 
-                    // 今回の更新で新たに必要回数に達した場合、餌として降らせる
-                    if (prevCount < requiredTimes && memory[newWord] >= requiredTimes) {
-                        const isAlreadySpawned = foods.some(f => f.text === newWord);
-                        if (!isAlreadySpawned) {
-                            spawnFood(newWord);
+                        // 今回の更新で新たに必要回数に達した場合、餌として降らせる
+                        if (prevCount < requiredTimes && memory[newWord] >= requiredTimes) {
+                            const isAlreadySpawned = foods.some(f => f.text === newWord);
+                            if (!isAlreadySpawned) {
+                                spawnFood(newWord);
+                            }
                         }
                     }
-                }
-            })
-            .subscribe();
+                })
+                .subscribe((status, err) => {
+                    if (err) {
+                        console.error('Supabaseリアルタイム同期エラー:', err);
+                    }
+                });
+        } catch (err) {
+            console.error('Supabaseリアルタイム設定に失敗しました:', err);
+        }
     }
 
     // 初期化実行
