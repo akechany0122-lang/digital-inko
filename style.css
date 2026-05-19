@@ -320,25 +320,39 @@ body {
     gap: 10px;
 }
 
-.volume-widget {
+.share-widget {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
+    gap: 6px;
+    padding: 6px;
     background: #fffcf2;
     border: 3px solid #2b2b2b;
     border-radius: 12px;
     box-shadow: 3px 3px 0px rgba(0,0,0,0.25);
 }
 
-.volume-icon {
-    font-size: 1.2rem;
+.share-btn {
+    font-family: inherit;
+    font-weight: bold;
+    border: 2px solid #2b2b2b;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    color: white;
+    transition: transform 0.1s;
 }
 
-#volume-slider {
-    width: 80px;
-    accent-color: #4CAF50;
-    cursor: pointer;
+.share-btn:active {
+    transform: scale(0.95);
+}
+
+.x-btn {
+    background-color: #000;
+}
+
+.line-btn {
+    background-color: #00b900;
 }
 
 .help-widget {
@@ -730,12 +744,13 @@ body {
         left: 12px;
         gap: 6px;
     }
-    .volume-widget {
-        padding: 4px 8px;
+    .share-widget {
+        padding: 4px;
         gap: 4px;
     }
-    .volume-icon {
-        font-size: 1rem;
+    .share-btn {
+        font-size: 0.85rem;
+        padding: 4px 8px;
     }
     .help-btn {
         width: 36px;
@@ -745,10 +760,6 @@ body {
     .help-panel {
         width: 260px;
         top: 45px;
-    }
-
-    #volume-slider {
-        width: 50px;
     }
 
     /* ボタンサイズ調整 */

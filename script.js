@@ -50,15 +50,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==========================================
-    // 音量調節UIとiOS音声再生の初期化
+    // 共有UIの設定とiOS音声再生の初期化
     // ==========================================
-    const volumeSlider = document.getElementById('volume-slider');
-    let parrotVolume = 1.0;
-    if (volumeSlider) {
-        volumeSlider.addEventListener('input', (e) => {
-            parrotVolume = parseFloat(e.target.value);
+    const shareXBtn = document.getElementById('share-x');
+    const shareLineBtn = document.getElementById('share-line');
+    const shareUrl = encodeURIComponent('https://akechany0122-lang.github.io/digital-inko/');
+    const shareText = encodeURIComponent('みんなでデジタルインコを育てよう！');
+
+    if (shareXBtn) {
+        shareXBtn.addEventListener('click', () => {
+            window.open(`https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`, '_blank');
         });
     }
+    if (shareLineBtn) {
+        shareLineBtn.addEventListener('click', () => {
+            window.open(`https://social-plugins.line.me/lineit/share?url=${shareUrl}&text=${shareText}`, '_blank');
+        });
+    }
+
+    const parrotVolume = 1.0;
 
     // iOS Safari対策: 初回のユーザー操作時にダミー音声を再生してAPIを有効化する
     let hasInitializedSpeech = false;
