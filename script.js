@@ -332,26 +332,35 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    // スマホ版の音声途切れバグ対策（iOS Safariのガベージコレクション対策）
+    window.parrotUtterances = [];
+
     // インコが喋る機能
     function speakParrot(text) {
         if (!window.speechSynthesis) return;
+
+        // キューが詰まって無音になるのを防ぐため、新しい発話の前に一度キャンセルする
+        window.speechSynthesis.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'ja-JP';
         utterance.volume = parrotVolume; // UIと連動した音量
 
+        // GC対策: 配列に保持しておくことで、発話終了前にオブジェクトが消えるのを防ぐ
+        window.parrotUtterances.push(utterance);
+
         // イントネーションのバリエーション
         let basePitch = 2.0;
-        let baseRate = 1.3;
+        let baseRate = 1.0;
 
-        // 語尾が「？」や「?」の場合はピッチを高くする（疑問形イントネーションの模倣）
+        // スマホは早口になりがちなので、全体的にrateを下げて「丁寧に」喋らせる
         if (text.endsWith('？') || text.endsWith('?')) {
-            basePitch = 2.3;
-            baseRate = 1.1; // 少しゆっくりに
+            basePitch = 2.2;
+            baseRate = 0.9; // 丁寧に少しゆっくり
         } else {
             // それ以外は毎回少しピッチを揺らがせて、イントネーションの違いを表現
-            basePitch = 1.8 + (Math.random() * 0.4); // 1.8 〜 2.2
-            baseRate = 1.2 + (Math.random() * 0.2);  // 1.2 〜 1.4
+            basePitch = 1.7 + (Math.random() * 0.4); // 1.7 〜 2.1
+            baseRate = 0.85 + (Math.random() * 0.15);  // 0.85 〜 1.0 (前よりゆっくり)
         }
 
         utterance.pitch = basePitch;
@@ -372,6 +381,23 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 speechBubble.classList.add('hidden');
             }, 1000); // 1秒後に吹き出しを消す
+
+            // 終わったら配列から削除
+            const index = window.parrotUtterances.indexOf(utterance);
+            if (index > -1) {
+                window.parrotUtterances.splice(index, 1);
+            }
+        };
+
+        // エラー発生時のリカバリ（途切れた場合など）
+        utterance.onerror = (e) => {
+            console.error('SpeechSynthesis Error:', e);
+            isSpeaking = false;
+            parrotElement.className = 'parrot-sprite facing-front';
+            const index = window.parrotUtterances.indexOf(utterance);
+            if (index > -1) {
+                window.parrotUtterances.splice(index, 1);
+            }
         };
 
         window.speechSynthesis.speak(utterance);
